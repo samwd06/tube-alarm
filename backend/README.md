@@ -1,1 +1,45 @@
 # Backend (FastAPI)
+
+Python code that loads Tube data from the TfL Unified API into PostgreSQL and answers questions about routes.
+
+## Files
+
+- `schema.sql` creates the `stations` and `route_sequences` tables.
+- `load_routes.py` saves every Tube line's stations and route order. Each branch is stored as its own route.
+- `stops_between.py` finds the stops between two stations on the same line, in travel order.
+- `api.py` serves the same data over HTTP.
+- `test_stops_between.py` has the tests.
+
+## Setup
+
+You need PostgreSQL 18 and a TfL API key. The `.env` file in the project root should contain:
+
+```
+TFL_APP_KEY=your-tfl-key
+DB_PASSWORD=your-postgres-password
+```
+
+Then, from this folder:
+
+```
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+createdb -U postgres tube_alarm
+psql -U postgres -d tube_alarm -f schema.sql
+python load_routes.py
+```
+
+`load_routes.py` can be run again at any time to refresh the data.
+
+## Running
+
+```
+python -m pytest
+uvicorn api:app --reload
+```
+
+The API then runs at http://localhost:8000. Open http://localhost:8000/docs to try it in the browser.
+
+- `GET /stations?q=hammersmith` lists matching stations.
+- `GET /stops?start=Stockwell&end=Green Park` lists the stops in order. It returns 404 if a name is unclear or the journey needs a change of line.
