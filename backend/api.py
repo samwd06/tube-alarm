@@ -1,7 +1,8 @@
+import requests
 from fastapi import FastAPI, HTTPException
 
 from journey import plan_journey
-from status import line_statuses
+from status import line_statuses, warnings_for
 from stops_between import find_stations, stops_between
 
 app = FastAPI(title="Tube Alarm")
@@ -28,6 +29,15 @@ def status():
 @app.get("/journey")
 def journey(start: str, end: str):
     try:
-        return {"start": start, "end": end, "legs": plan_journey(start, end)}
+        legs = plan_journey(start, end)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error))
+
+    # The journey is still useful without live data, so a TfL outage only drops the warnings
+    try:
+        statuses = line_statuses()
+    except requests.RequestException:
+        statuses = {}
+
+    lines = [leg["line"] for leg in legs if leg["line"]]
+    return {"start": start, "end": end, "legs": legs, "warnings": warnings_for(lines, statuses)}

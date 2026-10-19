@@ -1,4 +1,4 @@
-from status import parse_statuses
+from status import parse_statuses, warnings_for
 
 
 def status(severity, description, reason=None):
@@ -32,3 +32,12 @@ def test_more_than_one_status():
     assert district["good"] is False
     assert district["status"] == "Part Closure, Minor Delays"
     assert len(district["reasons"]) == 2
+
+
+def test_warnings_only_for_lines_on_the_journey():
+    warnings = warnings_for(["victoria", "central"], parse_statuses(SAMPLE))
+    assert [w["line"] for w in warnings] == ["central"]
+
+
+def test_no_warnings_without_live_data():
+    assert warnings_for(["central"], {}) == []

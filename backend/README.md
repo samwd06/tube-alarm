@@ -44,4 +44,5 @@ The API then runs at http://localhost:8000. Open http://localhost:8000/docs to t
 
 - `GET /stations?q=hammersmith` lists matching stations.
 - `GET /stops?start=Stockwell&end=Green Park` lists the stops in order. It returns 404 if a name is unclear or the journey needs a change of line.
-- `GET /journey?start=Brixton&end=Bank` plans a journey across lines and returns one leg per line.
+- `GET /journey?start=Brixton&end=Bank` plans a journey across lines and returns one leg per line, plus warnings for any of those lines that are disrupted right now.
+- `GET /status` shows the live status of every Tube line.
