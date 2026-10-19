@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 
+from journey import plan_journey
 from stops_between import find_stations, stops_between
 
 app = FastAPI(title="Tube Alarm")
@@ -14,5 +15,13 @@ def stations(q: str):
 def stops(start: str, end: str):
     try:
         return {"start": start, "end": end, "stops": stops_between(start, end)}
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+
+@app.get("/journey")
+def journey(start: str, end: str):
+    try:
+        return {"start": start, "end": end, "legs": plan_journey(start, end)}
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error))
