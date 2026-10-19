@@ -12,7 +12,7 @@ conn = psycopg.connect(
 )
 
 # Station names without " Underground Station", so they are easy to type
-SHORT_NAME = "REPLACE(name, ' Underground Station', '')"
+SHORT_NAME = "REPLACE(REPLACE(name, ' Underground Station', ''), '-Underground', '')"
 
 
 def stops_between(start, end):
