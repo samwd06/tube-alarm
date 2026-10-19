@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 # Read the API key from the .env file in the main project folder
 load_dotenv("../.env")
-api_key = os.getenv("70adbf8cb83f4f74b81f95d3618f90af")
+api_key = os.getenv("TFL_APP_KEY")
 
 url = "https://api.tfl.gov.uk/Line/victoria/Route/Sequence/outbound"
 response = requests.get(url, params={"app_key": api_key})
