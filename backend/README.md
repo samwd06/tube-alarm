@@ -47,3 +47,4 @@ The API then runs at http://localhost:8000. Open http://localhost:8000/docs to t
 - `GET /journey?start=Brixton&end=Bank` plans a journey across lines and returns one leg per line, plus warnings for any of those lines that are disrupted right now.
 - `GET /status` shows the live status of every Tube line.
 - `GET /progress?start=Brixton&end=Bank&current=London Bridge` says how many stops are left and whether to wake the passenger. The alarm goes off one stop before each change and before the destination, or earlier with `wake_before=2`.
+- `GET /nearest?lat=51.5079&lon=-0.1390` lists the closest stations with their distance in metres.
