@@ -1,7 +1,7 @@
 import requests
 from fastapi import FastAPI, HTTPException
 
-from alarm import progress
+from alarm import progress, remaining_legs
 from estimate import journey_minutes
 from journey import plan_journey
 from nearest import nearest_stations
@@ -63,6 +63,9 @@ def journey(start: str, end: str):
 @app.get("/progress")
 def journey_progress(start: str, end: str, current: str, wake_before: int = 1):
     try:
-        return progress(plan_journey(start, end), current, wake_before)
+        legs = plan_journey(start, end)
+        result = progress(legs, current, wake_before)
+        result["minutes_left"] = journey_minutes(remaining_legs(legs, current))
+        return result
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error))

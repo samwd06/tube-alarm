@@ -1,6 +1,6 @@
 import pytest
 
-from alarm import progress
+from alarm import progress, remaining_legs
 
 # Brixton to Bank, as plan_journey returns it
 LEGS = [
@@ -40,3 +40,19 @@ def test_name_ignores_case():
 def test_station_not_on_journey():
     with pytest.raises(ValueError, match="not on this journey"):
         progress(LEGS, "Victoria")
+
+
+def test_remaining_from_the_middle_of_a_leg():
+    left = remaining_legs(LEGS, "Kennington")
+    assert left == [{"line": "northern", "stops": ["Kennington", "Elephant & Castle",
+                                                   "Borough", "London Bridge", "Bank"]}]
+
+
+def test_remaining_from_a_change_station_skips_the_finished_line():
+    left = remaining_legs(LEGS, "Stockwell")
+    assert [leg["line"] for leg in left] == ["northern"]
+    assert left[0]["stops"][0] == "Stockwell"
+
+
+def test_remaining_at_the_destination():
+    assert remaining_legs(LEGS, "Bank") == [{"line": "northern", "stops": ["Bank"]}]

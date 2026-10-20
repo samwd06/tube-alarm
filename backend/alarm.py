@@ -1,3 +1,16 @@
+def remaining_legs(legs, current):
+    for i, leg in enumerate(legs):
+        names = [stop.lower() for stop in leg["stops"]]
+        if current.lower() not in names:
+            continue
+        here = names.index(current.lower())
+        # At a change station, what's left starts with the next line, not the end of this one
+        if here == len(names) - 1 and i < len(legs) - 1:
+            continue
+        return [{"line": leg["line"], "stops": leg["stops"][here:]}] + legs[i + 1:]
+    raise ValueError(f"{current} is not on this journey")
+
+
 def progress(legs, current, wake_before=1):
     # One list of every stop, with each change station only counted once
     stops = legs[0]["stops"] + [stop for leg in legs[1:] for stop in leg["stops"][1:]]
