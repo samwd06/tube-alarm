@@ -29,7 +29,7 @@ fun parseJourney(json: String): Journey {
         },
         warnings = (0 until warnings.length()).map { i ->
             val warning = warnings.getJSONObject(i)
-            "${warning.getString("line")}: ${warning.getString("status")}"
+            "${lineName(warning.getString("line"))}: ${warning.getString("status")}"
         },
     )
 }
