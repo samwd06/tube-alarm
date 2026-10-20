@@ -1,0 +1,66 @@
+import requests
+from fastapi.testclient import TestClient
+
+import api
+
+client = TestClient(api.app)
+
+
+def fake_statuses():
+    return {
+        "victoria": {"good": False, "status": "Minor Delays", "reasons": ["Signal failure at Brixton."]},
+        "northern": {"good": True, "status": "Good Service", "reasons": []},
+    }
+
+
+def tfl_is_down():
+    raise requests.ConnectionError("no connection")
+
+
+def test_stations_search():
+    response = client.get("/stations", params={"q": "hammersmith"})
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_stops_on_one_line():
+    response = client.get("/stops", params={"start": "Stockwell", "end": "Green Park"})
+    assert response.json()["stops"][-1] == "Green Park"
+
+
+def test_stops_needing_a_change_is_404():
+    response = client.get("/stops", params={"start": "Brixton", "end": "Bank"})
+    assert response.status_code == 404
+
+
+def test_journey_warns_about_delays(monkeypatch):
+    # Use made-up statuses so the test doesn't depend on today's real service
+    monkeypatch.setattr(api, "line_statuses", fake_statuses)
+    body = client.get("/journey", params={"start": "Brixton", "end": "Bank"}).json()
+    assert [leg["line"] for leg in body["legs"]] == ["victoria", "northern"]
+    assert [w["line"] for w in body["warnings"]] == ["victoria"]
+    assert body["minutes"] > 0
+
+
+def test_journey_still_works_when_tfl_is_down(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", tfl_is_down)
+    response = client.get("/journey", params={"start": "Brixton", "end": "Bank"})
+    assert response.status_code == 200
+    assert response.json()["warnings"] == []
+
+
+def test_status_when_tfl_is_down(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", tfl_is_down)
+    assert client.get("/status").status_code == 503
+
+
+def test_progress_near_the_end():
+    params = {"start": "Brixton", "end": "Bank", "current": "London Bridge"}
+    body = client.get("/progress", params=params).json()
+    assert body["wake_up"] is True
+    assert body["stops_left"] == 1
+
+
+def test_nearest_needs_numbers():
+    assert client.get("/nearest", params={"lat": "abc", "lon": "0"}).status_code == 422
+    assert client.get("/nearest", params={"lat": 51.5079, "lon": -0.1390}).json()[0]["name"] == "Green Park"
