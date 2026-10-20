@@ -8,7 +8,7 @@ load_dotenv("../.env")
 api_key = os.getenv("TFL_APP_KEY")
 
 # Ask TfL for every Tube line, e.g. "bakerloo", "victoria"
-response = requests.get("https://api.tfl.gov.uk/Line/Mode/tube", params={"app_key": api_key})
+response = requests.get("https://api.tfl.gov.uk/Line/Mode/tube", params={"app_key": api_key}, timeout=30)
 response.raise_for_status()
 LINES = [line["id"] for line in response.json()]
 
@@ -16,7 +16,7 @@ with conn:
     for line in LINES:
         for direction in ["outbound", "inbound"]:
             url = f"https://api.tfl.gov.uk/Line/{line}/Route/Sequence/{direction}"
-            response = requests.get(url, params={"app_key": api_key})
+            response = requests.get(url, params={"app_key": api_key}, timeout=30)
             response.raise_for_status()
             data = response.json()
 

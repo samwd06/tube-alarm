@@ -31,7 +31,8 @@ def warnings_for(lines, statuses):
 
 def line_statuses():
     url = "https://api.tfl.gov.uk/Line/Mode/tube/Status"
-    response = requests.get(url, params={"app_key": api_key})
+    # Don't let a slow TfL response hold up the whole request
+    response = requests.get(url, params={"app_key": api_key}, timeout=5)
     response.raise_for_status()
     return parse_statuses(response.json())
 

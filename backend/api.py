@@ -30,7 +30,10 @@ def stops(start: str, end: str):
 
 @app.get("/status")
 def status():
-    return line_statuses()
+    try:
+        return line_statuses()
+    except requests.RequestException:
+        raise HTTPException(status_code=503, detail="TfL is not responding, try again shortly")
 
 
 @app.get("/journey")
