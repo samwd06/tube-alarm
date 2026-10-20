@@ -15,3 +15,13 @@ CREATE TABLE IF NOT EXISTS route_sequences (
     station_id TEXT    NOT NULL REFERENCES stations (id),
     PRIMARY KEY (line, direction, route, position)
 );
+
+-- Snapshots of each line's live status, saved by log_status.py for later analysis
+CREATE TABLE IF NOT EXISTS status_log (
+    checked_at TIMESTAMPTZ NOT NULL,
+    line       TEXT        NOT NULL,
+    good       BOOLEAN     NOT NULL,
+    status     TEXT        NOT NULL,
+    reasons    TEXT,
+    PRIMARY KEY (checked_at, line)
+);

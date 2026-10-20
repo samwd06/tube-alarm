@@ -9,6 +9,7 @@ Python code that loads Tube data from the TfL Unified API into PostgreSQL and an
 - `load_routes.py` saves every Tube line's stations and route order. Each branch is stored as its own route.
 - `stops_between.py` finds the stops between two stations on the same line, in travel order.
 - `journey.py` plans journeys that change lines, preferring fewer changes and then fewer stops. It also knows a few short walks between separate stations, such as Bank and Monument.
+- `log_status.py` saves a snapshot of every line's live status to the `status_log` table, building up disruption data for the notebooks.
 - `api.py` serves the same data over HTTP.
 - `test_stops_between.py` and `test_journey.py` have the tests.
 
@@ -33,6 +34,12 @@ python load_routes.py
 ```
 
 `load_routes.py` can be run again at any time to refresh the data.
+
+To collect disruption data, run `python log_status.py` regularly. For example, this `crontab -e` line saves a snapshot every 15 minutes:
+
+```
+*/15 * * * * cd /path/to/tube-alarm/backend && venv/bin/python log_status.py
+```
 
 ## Running
 
