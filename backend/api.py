@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 
 from alarm import progress
 from journey import plan_journey
+from nearest import nearest_stations
 from status import line_statuses, warnings_for
 from stops_between import find_stations, stops_between
 
@@ -12,6 +13,11 @@ app = FastAPI(title="Tube Alarm")
 @app.get("/stations")
 def stations(q: str):
     return [{"id": station_id, "name": name} for station_id, name in find_stations(q)]
+
+
+@app.get("/nearest")
+def nearest(lat: float, lon: float, limit: int = 3):
+    return nearest_stations(lat, lon, limit)
 
 
 @app.get("/stops")
