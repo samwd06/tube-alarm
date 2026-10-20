@@ -1,6 +1,7 @@
 import heapq
 
-from stops_between import SHORT_NAME, conn, pick_station
+from db import conn
+from stops_between import SHORT_NAME, pick_station
 
 # A change of line counts the same as this many extra stops
 CHANGE_COST = 5

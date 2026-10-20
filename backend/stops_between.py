@@ -1,15 +1,4 @@
-import os
-import psycopg
-from dotenv import load_dotenv
-
-load_dotenv("../.env")
-
-conn = psycopg.connect(
-    dbname="tube_alarm",
-    user="postgres",
-    password=os.getenv("DB_PASSWORD"),
-    host="localhost",
-)
+from db import conn
 
 # Station names without " Underground Station", so they are easy to type
 SHORT_NAME = "REPLACE(REPLACE(name, ' Underground Station', ''), '-Underground', '')"

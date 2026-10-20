@@ -1,7 +1,8 @@
 import os
 import requests
-import psycopg
 from dotenv import load_dotenv
+
+from db import conn
 
 load_dotenv("../.env")
 api_key = os.getenv("TFL_APP_KEY")
@@ -10,13 +11,6 @@ api_key = os.getenv("TFL_APP_KEY")
 response = requests.get("https://api.tfl.gov.uk/Line/Mode/tube", params={"app_key": api_key})
 response.raise_for_status()
 LINES = [line["id"] for line in response.json()]
-
-conn = psycopg.connect(
-    dbname="tube_alarm",
-    user="postgres",
-    password=os.getenv("DB_PASSWORD"),
-    host="localhost",
-)
 
 with conn:
     for line in LINES:

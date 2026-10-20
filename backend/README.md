@@ -5,6 +5,7 @@ Python code that loads Tube data from the TfL Unified API into PostgreSQL and an
 ## Files
 
 - `schema.sql` creates the `stations` and `route_sequences` tables.
+- `db.py` opens the database connection that the other files share.
 - `load_routes.py` saves every Tube line's stations and route order. Each branch is stored as its own route.
 - `stops_between.py` finds the stops between two stations on the same line, in travel order.
 - `journey.py` plans journeys that change lines, preferring fewer changes and then fewer stops.

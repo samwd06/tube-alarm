@@ -1,6 +1,7 @@
 import math
 
-from stops_between import SHORT_NAME, conn
+from db import conn
+from stops_between import SHORT_NAME
 
 EARTH_RADIUS_M = 6_371_000
 
