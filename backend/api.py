@@ -2,6 +2,7 @@ import requests
 from fastapi import FastAPI, HTTPException
 
 from alarm import progress
+from estimate import journey_minutes
 from journey import plan_journey
 from nearest import nearest_stations
 from status import line_statuses, warnings_for
@@ -50,7 +51,13 @@ def journey(start: str, end: str):
         statuses = {}
 
     lines = [leg["line"] for leg in legs if leg["line"]]
-    return {"start": start, "end": end, "legs": legs, "warnings": warnings_for(lines, statuses)}
+    return {
+        "start": start,
+        "end": end,
+        "minutes": journey_minutes(legs),
+        "legs": legs,
+        "warnings": warnings_for(lines, statuses),
+    }
 
 
 @app.get("/progress")
