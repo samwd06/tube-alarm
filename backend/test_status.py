@@ -34,6 +34,16 @@ def test_more_than_one_status():
     assert len(district["reasons"]) == 2
 
 
+def test_repeated_status_only_shows_once():
+    circle = [{"id": "circle", "lineStatuses": [
+        status(3, "Part Suspended", "No service between Edgware Road and Aldgate."),
+        status(3, "Part Suspended", "No service between Hammersmith and Paddington."),
+    ]}]
+    result = parse_statuses(circle)["circle"]
+    assert result["status"] == "Part Suspended"
+    assert len(result["reasons"]) == 2
+
+
 def test_warnings_only_for_lines_on_the_journey():
     warnings = warnings_for(["victoria", "central"], parse_statuses(SAMPLE))
     assert [w["line"] for w in warnings] == ["central"]

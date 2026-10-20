@@ -15,7 +15,8 @@ def parse_statuses(data):
         statuses = line["lineStatuses"]
         lines[line["id"]] = {
             "good": all(s["statusSeverity"] == GOOD_SERVICE for s in statuses),
-            "status": ", ".join(s["statusSeverityDescription"] for s in statuses),
+            # dict.fromkeys drops repeats but keeps the order, so "Part Suspended" only shows once
+            "status": ", ".join(dict.fromkeys(s["statusSeverityDescription"] for s in statuses)),
             "reasons": [s["reason"] for s in statuses if s.get("reason")],
         }
     return lines
