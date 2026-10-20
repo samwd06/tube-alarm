@@ -28,6 +28,13 @@ def test_two_changes():
     assert legs[-1]["stops"][-1] == "Amersham"
 
 
+def test_walks_between_the_two_hammersmiths():
+    legs = plan_journey("Hammersmith (H&C Line)", "Barons Court")
+    assert lines_used(legs)[0] == "walk"
+    assert legs[0]["stops"] == ["Hammersmith (H&C Line)", "Hammersmith (Dist&Picc Line)"]
+    assert legs[-1]["stops"][-1] == "Barons Court"
+
+
 def test_same_station():
     assert plan_journey("Victoria", "Victoria") == [{"line": None, "stops": ["Victoria"]}]
 

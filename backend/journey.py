@@ -6,6 +6,16 @@ from stops_between import SHORT_NAME, pick_station
 # A change of line counts the same as this many extra stops
 CHANGE_COST = 5
 
+# Separate stations that are a short, well-known walk apart
+WALKS = [
+    ("Bank", "Monument"),
+    ("Paddington", "Paddington (H&C Line)"),
+    ("Edgware Road (Bakerloo)", "Edgware Road (Circle Line)"),
+    ("Hammersmith (Dist&Picc Line)", "Hammersmith (H&C Line)"),
+    ("Euston", "Euston Square"),
+    ("White City", "Wood Lane"),
+]
+
 
 def load_network():
     names = dict(conn.execute(f"SELECT id, {SHORT_NAME} FROM stations").fetchall())
@@ -25,6 +35,12 @@ def load_network():
         if previous and previous[:3] == (line, direction, route):
             next_stops.setdefault(previous[3], set()).add((station_id, line))
         previous = (line, direction, route, station_id)
+
+    # Walking works both ways, and counts as its own "line" so it shows up as a leg
+    ids = {name: station_id for station_id, name in names.items()}
+    for a, b in WALKS:
+        next_stops.setdefault(ids[a], set()).add((ids[b], "walk"))
+        next_stops.setdefault(ids[b], set()).add((ids[a], "walk"))
     return names, next_stops
 
 

@@ -8,7 +8,7 @@ Python code that loads Tube data from the TfL Unified API into PostgreSQL and an
 - `db.py` opens the database connection that the other files share.
 - `load_routes.py` saves every Tube line's stations and route order. Each branch is stored as its own route.
 - `stops_between.py` finds the stops between two stations on the same line, in travel order.
-- `journey.py` plans journeys that change lines, preferring fewer changes and then fewer stops.
+- `journey.py` plans journeys that change lines, preferring fewer changes and then fewer stops. It also knows a few short walks between separate stations, such as Bank and Monument.
 - `api.py` serves the same data over HTTP.
 - `test_stops_between.py` and `test_journey.py` have the tests.
 
