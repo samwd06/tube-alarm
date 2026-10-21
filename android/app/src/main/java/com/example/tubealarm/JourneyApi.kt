@@ -34,10 +34,36 @@ fun parseJourney(json: String): Journey {
     )
 }
 
-// This blocks while it waits for the server, so only call it off the main thread
-fun fetchJourney(start: String, end: String): Journey {
-    val query = "start=${encode(start)}&end=${encode(end)}"
-    val connection = URL("$BACKEND_URL/journey?$query").openConnection() as HttpURLConnection
+data class Progress(
+    val current: String,
+    val stopsLeft: Int,
+    val nextStopOff: String,
+    val stopsToNextStopOff: Int,
+    val wakeUp: Boolean,
+    val minutesLeft: Int,
+)
+
+fun parseProgress(json: String): Progress {
+    val body = JSONObject(json)
+    return Progress(
+        current = body.getString("current"),
+        stopsLeft = body.getInt("stops_left"),
+        nextStopOff = body.getString("next_stop_off"),
+        stopsToNextStopOff = body.getInt("stops_to_next_stop_off"),
+        wakeUp = body.getBoolean("wake_up"),
+        minutesLeft = body.getInt("minutes_left"),
+    )
+}
+
+// Both of these block while they wait for the server, so only call them off the main thread
+fun fetchJourney(start: String, end: String): Journey =
+    parseJourney(get("/journey?start=${encode(start)}&end=${encode(end)}"))
+
+fun fetchProgress(start: String, end: String, current: String): Progress =
+    parseProgress(get("/progress?start=${encode(start)}&end=${encode(end)}&current=${encode(current)}"))
+
+private fun get(path: String): String {
+    val connection = URL("$BACKEND_URL$path").openConnection() as HttpURLConnection
     connection.connectTimeout = 5_000
     connection.readTimeout = 10_000
 
@@ -48,7 +74,7 @@ fun fetchJourney(start: String, end: String): Journey {
             val detail = runCatching { JSONObject(error).getString("detail") }.getOrNull()
             throw IllegalArgumentException(detail ?: "The server returned ${connection.responseCode}")
         }
-        return parseJourney(connection.inputStream.bufferedReader().readText())
+        return connection.inputStream.bufferedReader().readText()
     } finally {
         connection.disconnect()
     }

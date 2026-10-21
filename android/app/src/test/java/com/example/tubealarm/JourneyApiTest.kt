@@ -46,6 +46,21 @@ class JourneyApiTest {
     }
 
     @Test
+    fun readsProgress() {
+        val progress = parseProgress(
+            """
+            {"current": "Stockwell", "stops_left": 6, "next_stop_off": "Bank",
+             "stops_to_next_stop_off": 6, "wake_up": false, "minutes_left": 12}
+            """
+        )
+
+        assertEquals("Bank", progress.nextStopOff)
+        assertEquals(6, progress.stopsToNextStopOff)
+        assertEquals(false, progress.wakeUp)
+        assertEquals(12, progress.minutesLeft)
+    }
+
+    @Test
     fun oneStopIsNotPlural() {
         assertEquals("1 stop", stopsText(1))
         assertEquals("3 stops", stopsText(3))
