@@ -1,5 +1,6 @@
 package com.example.tubealarm
 
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -61,6 +62,12 @@ fun fetchJourney(start: String, end: String): Journey =
 
 fun fetchProgress(start: String, end: String, current: String): Progress =
     parseProgress(get("/progress?start=${encode(start)}&end=${encode(end)}&current=${encode(current)}"))
+
+// The backend sorts by distance, so the first name is the closest station
+fun parseNearest(json: String): String = JSONArray(json).getJSONObject(0).getString("name")
+
+fun fetchNearest(lat: Double, lon: Double): String =
+    parseNearest(get("/nearest?lat=$lat&lon=$lon&limit=1"))
 
 private fun get(path: String): String {
     val connection = URL("$BACKEND_URL$path").openConnection() as HttpURLConnection

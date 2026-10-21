@@ -61,6 +61,12 @@ class JourneyApiTest {
     }
 
     @Test
+    fun nearestTakesTheClosestStation() {
+        val json = """[{"name": "Green Park", "metres": 310}, {"name": "Piccadilly Circus", "metres": 480}]"""
+        assertEquals("Green Park", parseNearest(json))
+    }
+
+    @Test
     fun oneStopIsNotPlural() {
         assertEquals("1 stop", stopsText(1))
         assertEquals("3 stops", stopsText(3))
