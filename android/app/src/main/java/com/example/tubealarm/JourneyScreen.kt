@@ -13,6 +13,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -80,7 +81,13 @@ fun JourneyScreen(modifier: Modifier = Modifier) {
         }
 
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        journey?.let { JourneyResult(it) }
+        journey?.let {
+            JourneyResult(it)
+            if (it.minutes > 0) {
+                // A new journey gets a fresh alarm rather than carrying on the old one
+                key(it) { AlarmCard(it.legs.first().stops.first(), it.legs.last().stops.last()) }
+            }
+        }
     }
 }
 
