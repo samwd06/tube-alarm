@@ -1,12 +1,8 @@
 package com.example.tubealarm
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
-import android.os.VibrationEffect
-import android.os.Vibrator
+import android.content.Intent
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -19,8 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,57 +23,35 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
-// Location is only read after the permission has been granted, which lint can't see
-@SuppressLint("MissingPermission")
 @Composable
 fun AlarmCard(start: String, end: String) {
     val context = LocalContext.current
-    var running by remember { mutableStateOf(false) }
-    var location by remember { mutableStateOf<Location?>(null) }
-    var progress by remember { mutableStateOf<Progress?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    val journey by AlarmService.journey.collectAsState()
+    val progress by AlarmService.progress.collectAsState()
+    val serviceError by AlarmService.error.collectAsState()
+    var permissionError by remember { mutableStateOf<String?>(null) }
+    val running = journey == (start to end)
 
-    val askForLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        running = granted
-        error = if (granted) null else "The alarm needs your location to know which station you're at"
+    val permissions = buildList {
+        add(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
     }
-
-    if (running) {
-        DisposableEffect(Unit) {
-            val manager = context.getSystemService(LocationManager::class.java)
-            val listener = LocationListener { location = it }
-            manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10_000L, 0f, listener)
-            onDispose { manager.removeUpdates(listener) }
-        }
-
-        LaunchedEffect(Unit) {
-            while (true) {
-                val here = location
-                if (here == null) {
-                    delay(2_000)
-                    continue
-                }
-                try {
-                    progress = withContext(Dispatchers.IO) {
-                        fetchProgress(start, end, fetchNearest(here.latitude, here.longitude))
-                    }
-                    error = null
-                } catch (e: Exception) {
-                    error = e.message ?: "Couldn't reach the server"
-                }
-                delay(30_000)
+    val askForPermissions = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { granted ->
+        // Notifications are nice to have, but without location the alarm can't work at all
+        if (granted[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            permissionError = null
+            val intent = Intent(context, AlarmService::class.java)
+                .putExtra(AlarmService.EXTRA_START, start)
+                .putExtra(AlarmService.EXTRA_END, end)
+            context.startForegroundService(intent)
+            if (granted[Manifest.permission.POST_NOTIFICATIONS] == false) {
+                permissionError = "Without notifications the alarm can only vibrate when the screen is off"
             }
-        }
-
-        LaunchedEffect(progress?.wakeUp) {
-            if (progress?.wakeUp == true) {
-                val buzz = VibrationEffect.createWaveform(longArrayOf(0, 800, 400, 800, 400, 800), -1)
-                context.getSystemService(Vibrator::class.java).vibrate(buzz)
-            }
+        } else {
+            permissionError = "The alarm needs your location to know which station you're at"
         }
     }
 
@@ -87,9 +60,9 @@ fun AlarmCard(start: String, end: String) {
             Text("Alarm", style = MaterialTheme.typography.titleSmall)
 
             if (!running) {
-                Text("Wakes you up one stop before you need to get off")
+                Text("Wakes you up one stop before you need to get off, even with the screen locked")
                 Button(
-                    onClick = { askForLocation.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+                    onClick = { askForPermissions.launch(permissions.toTypedArray()) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Start alarm") }
             } else {
@@ -108,14 +81,12 @@ fun AlarmCard(start: String, end: String) {
                     }
                 }
                 OutlinedButton(
-                    onClick = {
-                        running = false
-                        progress = null
-                    },
+                    onClick = { context.stopService(Intent(context, AlarmService::class.java)) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Stop alarm") }
             }
 
+            val error = permissionError ?: serviceError.takeIf { running || journey == null }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
     }

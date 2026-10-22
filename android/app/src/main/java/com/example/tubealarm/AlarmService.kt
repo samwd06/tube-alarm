@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.VibrationEffect
 import android.os.Vibrator
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // An activity stops when the screen locks, so the alarm runs here instead,
 // with a notification that keeps it alive and shows how far there is to go
@@ -36,25 +38,41 @@ class AlarmService : Service() {
 
     @SuppressLint("MissingPermission")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val start = intent?.getStringExtra(EXTRA_START) ?: return START_NOT_STICKY
-        val end = intent.getStringExtra(EXTRA_END) ?: return START_NOT_STICKY
+        val start = intent?.getStringExtra(EXTRA_START)
+        val end = intent?.getStringExtra(EXTRA_END)
 
+        // Android kills the app if a foreground service doesn't call startForeground,
+        // so that has to happen before giving up on a bad intent
         createChannels()
-        val first = notification(ONGOING_CHANNEL, "Alarm on: $start to $end", "Finding your station...")
+        val title = if (start != null && end != null) "Alarm on: $start to $end" else "Tube Alarm"
+        val first = notification(ONGOING_CHANNEL, title, "Finding your station...")
         if (Build.VERSION.SDK_INT >= 29) {
             startForeground(ONGOING_ID, first, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
         } else {
             startForeground(ONGOING_ID, first)
         }
+        if (start == null || end == null) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         val manager = getSystemService(LocationManager::class.java)
         manager.removeUpdates(listener)
-        manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10_000L, 0f, listener)
+        try {
+            manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10_000L, 0f, listener)
+        } catch (e: Exception) {
+            // No GPS on this device, or location was turned off since the button was pressed
+            error.value = "Couldn't get your location"
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         // Starting again for a different journey replaces the old loop
         scope.coroutineContext.cancelChildren()
+        getSystemService(NotificationManager::class.java).cancel(WAKE_UP_ID)
         journey.value = start to end
         progress.value = null
+        error.value = null
         scope.launch { follow(start, end) }
         return START_NOT_STICKY
     }
@@ -68,7 +86,11 @@ class AlarmService : Service() {
                 continue
             }
             try {
-                val now = fetchProgress(start, end, fetchNearest(here.latitude, here.longitude))
+                // The fetches block, so cancelling can't stop one halfway. withContext at least
+                // throws on the way out, so a stopped alarm doesn't post or buzz afterwards
+                val now = withContext(Dispatchers.IO) {
+                    fetchProgress(start, end, fetchNearest(here.latitude, here.longitude))
+                }
                 progress.value = now
                 error.value = null
                 show(now)
@@ -77,6 +99,8 @@ class AlarmService : Service() {
                     wakeUp(now.nextStopOff)
                     wokenFor = now.nextStopOff
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 error.value = e.message ?: "Couldn't reach the server"
             }
@@ -122,10 +146,10 @@ class AlarmService : Service() {
 
     override fun onDestroy() {
         getSystemService(LocationManager::class.java).removeUpdates(listener)
+        getSystemService(NotificationManager::class.java).cancel(WAKE_UP_ID)
         scope.cancel()
         journey.value = null
         progress.value = null
-        error.value = null
         super.onDestroy()
     }
 
