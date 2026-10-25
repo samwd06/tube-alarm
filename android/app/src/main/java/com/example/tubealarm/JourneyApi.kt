@@ -16,7 +16,6 @@ data class Journey(val minutes: Int, val legs: List<Leg>, val warnings: List<Str
 fun parseJourney(json: String): Journey {
     val body = JSONObject(json)
     val legs = body.getJSONArray("legs")
-    val warnings = body.getJSONArray("warnings")
 
     return Journey(
         minutes = body.getInt("minutes"),
@@ -28,12 +27,16 @@ fun parseJourney(json: String): Journey {
                 stops = (0 until stops.length()).map { stops.getString(it) },
             )
         },
-        warnings = (0 until warnings.length()).map { i ->
-            val warning = warnings.getJSONObject(i)
-            "${lineName(warning.getString("line"))}: ${warning.getString("status")}"
-        },
+        warnings = parseWarnings(body.getJSONArray("warnings")),
     )
 }
+
+// Turned into text straight away, e.g. "Victoria line: Minor Delays"
+private fun parseWarnings(warnings: JSONArray): List<String> =
+    (0 until warnings.length()).map { i ->
+        val warning = warnings.getJSONObject(i)
+        "${lineName(warning.getString("line"))}: ${warning.getString("status")}"
+    }
 
 data class Progress(
     val current: String,
@@ -42,6 +45,7 @@ data class Progress(
     val stopsToNextStopOff: Int,
     val wakeUp: Boolean,
     val minutesLeft: Int,
+    val warnings: List<String>,
 )
 
 fun parseProgress(json: String): Progress {
@@ -53,6 +57,8 @@ fun parseProgress(json: String): Progress {
         stopsToNextStopOff = body.getInt("stops_to_next_stop_off"),
         wakeUp = body.getBoolean("wake_up"),
         minutesLeft = body.getInt("minutes_left"),
+        // A backend from before 25 Oct doesn't send these
+        warnings = body.optJSONArray("warnings")?.let(::parseWarnings) ?: emptyList(),
     )
 }
 

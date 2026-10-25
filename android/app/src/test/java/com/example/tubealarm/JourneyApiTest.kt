@@ -58,6 +58,20 @@ class JourneyApiTest {
         assertEquals(6, progress.stopsToNextStopOff)
         assertEquals(false, progress.wakeUp)
         assertEquals(12, progress.minutesLeft)
+        assertEquals(emptyList<String>(), progress.warnings)
+    }
+
+    @Test
+    fun readsProgressWarnings() {
+        val progress = parseProgress(
+            """
+            {"current": "Brixton", "stops_left": 7, "next_stop_off": "Stockwell",
+             "stops_to_next_stop_off": 1, "wake_up": true, "minutes_left": 17,
+             "warnings": [{"line": "victoria", "status": "Minor Delays", "reasons": []}]}
+            """
+        )
+
+        assertEquals(listOf("Victoria line: Minor Delays"), progress.warnings)
     }
 
     @Test

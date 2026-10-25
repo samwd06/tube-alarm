@@ -70,6 +70,7 @@ class AlarmService : Service() {
         // Starting again for a different journey replaces the old loop
         scope.coroutineContext.cancelChildren()
         getSystemService(NotificationManager::class.java).cancel(WAKE_UP_ID)
+        getSystemService(NotificationManager::class.java).cancel(DISRUPTION_ID)
         journey.value = start to end
         progress.value = null
         error.value = null
@@ -79,6 +80,7 @@ class AlarmService : Service() {
 
     private suspend fun CoroutineScope.follow(start: String, end: String) {
         var wokenFor: String? = null
+        var warned: Set<String>? = null
         while (isActive) {
             val here = location
             if (here == null) {
@@ -99,6 +101,11 @@ class AlarmService : Service() {
                     wakeUp(now.nextStopOff)
                     wokenFor = now.nextStopOff
                 }
+                // Whatever was wrong at the start was already on the journey screen,
+                // so only a new problem (or one getting worse) is worth a notification
+                val fresh = now.warnings - (warned ?: now.warnings.toSet())
+                if (fresh.isNotEmpty()) disrupted(fresh)
+                warned = now.warnings.toSet()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -119,6 +126,12 @@ class AlarmService : Service() {
         getSystemService(Vibrator::class.java).vibrate(buzz)
         val notifications = getSystemService(NotificationManager::class.java)
         notifications.notify(WAKE_UP_ID, notification(WAKE_UP_CHANNEL, "Wake up!", "Get off at $station"))
+    }
+
+    private fun disrupted(warnings: List<String>) {
+        val notifications = getSystemService(NotificationManager::class.java)
+        val text = warnings.joinToString(", ")
+        notifications.notify(DISRUPTION_ID, notification(DISRUPTION_CHANNEL, "Problem on your route", text))
     }
 
     private fun notification(channel: String, title: String, text: String): Notification {
@@ -142,11 +155,15 @@ class AlarmService : Service() {
         notifications.createNotificationChannel(
             NotificationChannel(WAKE_UP_CHANNEL, "Wake up alerts", NotificationManager.IMPORTANCE_HIGH)
         )
+        notifications.createNotificationChannel(
+            NotificationChannel(DISRUPTION_CHANNEL, "Disruptions on your route", NotificationManager.IMPORTANCE_DEFAULT)
+        )
     }
 
     override fun onDestroy() {
         getSystemService(LocationManager::class.java).removeUpdates(listener)
         getSystemService(NotificationManager::class.java).cancel(WAKE_UP_ID)
+        getSystemService(NotificationManager::class.java).cancel(DISRUPTION_ID)
         scope.cancel()
         journey.value = null
         progress.value = null
@@ -158,8 +175,10 @@ class AlarmService : Service() {
         const val EXTRA_END = "end"
         private const val ONGOING_CHANNEL = "progress"
         private const val WAKE_UP_CHANNEL = "wake_up"
+        private const val DISRUPTION_CHANNEL = "disruptions"
         private const val ONGOING_ID = 1
         private const val WAKE_UP_ID = 2
+        private const val DISRUPTION_ID = 3
 
         // The screen watches these, so it can show the alarm even after being closed and reopened
         val journey = MutableStateFlow<Pair<String, String>?>(null)

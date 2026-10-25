@@ -17,6 +17,7 @@ The Android app (Kotlin, Jetpack Compose) can:
 - plan a journey and show each line, the stops and a rough time
 - follow the journey by GPS once the alarm is started
 - vibrate and show a "Wake up!" notification one stop before each change and the destination, even with the screen locked
+- notify you if a line still ahead starts having problems during the journey
 
 See [backend/README.md](backend/README.md) for the backend setup and API, and [android/README.md](android/README.md) for running the app.
 

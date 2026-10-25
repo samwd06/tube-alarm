@@ -92,6 +92,7 @@ fun AlarmCard(start: String, end: String) {
                         Text("About ${now.minutesLeft} minutes left", style = MaterialTheme.typography.bodySmall)
                     }
                 }
+                now?.warnings?.forEach { Text(it, color = MaterialTheme.colorScheme.error) }
                 OutlinedButton(
                     onClick = { context.stopService(Intent(context, AlarmService::class.java)) },
                     modifier = Modifier.fillMaxWidth(),
