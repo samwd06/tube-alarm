@@ -66,11 +66,17 @@ fun AlarmCard(start: String, end: String) {
             Text("Alarm", style = MaterialTheme.typography.titleSmall)
 
             if (!running) {
-                Text("Wakes you up one stop before you need to get off, even with the screen locked")
+                // Only one alarm can run, so say so before starting this one quietly replaces it
+                val other = journey
+                if (other != null) {
+                    Text("The alarm is already on for ${other.first} to ${other.second}. Starting it here will stop that one")
+                } else {
+                    Text("Wakes you up one stop before you need to get off, even with the screen locked")
+                }
                 Button(
                     onClick = { askForPermissions.launch(permissions.toTypedArray()) },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Start alarm") }
+                ) { Text(if (other != null) "Switch alarm to this journey" else "Start alarm") }
             } else {
                 val now = progress
                 when {
