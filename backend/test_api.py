@@ -54,7 +54,8 @@ def test_status_when_tfl_is_down(monkeypatch):
     assert client.get("/status").status_code == 503
 
 
-def test_progress_near_the_end():
+def test_progress_near_the_end(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", fake_statuses)
     params = {"start": "Brixton", "end": "Bank", "current": "London Bridge"}
     body = client.get("/progress", params=params).json()
     assert body["wake_up"] is True
@@ -64,3 +65,25 @@ def test_progress_near_the_end():
 def test_nearest_needs_numbers():
     assert client.get("/nearest", params={"lat": "abc", "lon": "0"}).status_code == 422
     assert client.get("/nearest", params={"lat": 51.5079, "lon": -0.1390}).json()[0]["name"] == "Green Park"
+
+
+def test_progress_warns_about_lines_still_ahead(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", fake_statuses)
+    params = {"start": "Brixton", "end": "Bank", "current": "Brixton"}
+    body = client.get("/progress", params=params).json()
+    assert [w["line"] for w in body["warnings"]] == ["victoria"]
+
+
+def test_progress_forgets_lines_already_left(monkeypatch):
+    # Stockwell is the change, so only the Northern line is left and its service is good
+    monkeypatch.setattr(api, "line_statuses", fake_statuses)
+    params = {"start": "Brixton", "end": "Bank", "current": "Stockwell"}
+    assert client.get("/progress", params=params).json()["warnings"] == []
+
+
+def test_progress_still_works_when_tfl_is_down(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", tfl_is_down)
+    params = {"start": "Brixton", "end": "Bank", "current": "Brixton"}
+    response = client.get("/progress", params=params)
+    assert response.status_code == 200
+    assert response.json()["warnings"] == []
