@@ -6,8 +6,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-// The emulator reaches the Mac's own localhost through this address
-const val BACKEND_URL = "http://10.0.2.2:8000"
+// 10.0.2.2 on the emulator, or whatever backend.url says in local.properties
+const val BACKEND_URL = BuildConfig.BACKEND_URL
 
 data class Leg(val line: String?, val stops: List<String>)
 

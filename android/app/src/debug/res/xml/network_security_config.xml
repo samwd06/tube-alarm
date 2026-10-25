@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds may talk plain http to any address, so a phone can reach the backend on the Mac's Wi-Fi IP.
+     Release builds use the stricter file in src/main. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

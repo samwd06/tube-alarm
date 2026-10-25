@@ -31,6 +31,22 @@ The emulator reaches the Mac at `10.0.2.2`, which is the backend address the app
 adb emu geo fix -0.1419 51.5152
 ```
 
+## Running on a real phone
+
+The phone can't use `10.0.2.2`, so it needs the Mac's address on the Wi-Fi network instead. The phone and the Mac must be on the same Wi-Fi.
+
+1. Find the Mac's address with `ipconfig getifaddr en0`, for example `192.168.1.19`.
+2. Add it on its own line in `android/local.properties` (this file isn't committed):
+
+   ```
+   backend.url=http://192.168.1.19:8000
+   ```
+
+3. Start the backend with `--host 0.0.0.0` as above, so it accepts connections from other devices.
+4. Turn on USB debugging on the phone, plug it in and run the app from Android Studio.
+
+Debug builds are allowed to use plain http to any address for this. Release builds only allow it to the emulator.
+
 ## Tests
 
 ```
