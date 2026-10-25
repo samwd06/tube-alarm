@@ -47,7 +47,7 @@ def load_network():
 names, next_stops = load_network()
 
 
-def plan_journey(start, end):
+def plan_journey(start, end, avoid=()):
     start_id = pick_station(start)
     end_id = pick_station(end)
     if start_id == end_id:
@@ -65,6 +65,9 @@ def plan_journey(start, end):
         done.add((station, line))
 
         for next_station, next_line in next_stops.get(station, ()):
+            # Used to plan around a line that's badly disrupted
+            if next_line in avoid:
+                continue
             step = 1 if line in (None, next_line) else 1 + CHANGE_COST
             heapq.heappush(queue, (
                 cost + step, next_station, next_line,

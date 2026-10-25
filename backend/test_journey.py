@@ -35,6 +35,19 @@ def test_walks_between_the_two_hammersmiths():
     assert legs[-1]["stops"][-1] == "Barons Court"
 
 
+def test_avoiding_a_line():
+    legs = plan_journey("Brixton", "Bank", avoid={"northern"})
+    assert "northern" not in lines_used(legs)
+    assert legs[0]["line"] == "victoria"
+    assert legs[-1]["stops"][-1] == "Bank"
+
+
+def test_avoiding_the_only_line_finds_nothing():
+    # Brixton is only on the Victoria line, so there's no way out without it
+    with pytest.raises(ValueError, match="No route found"):
+        plan_journey("Brixton", "Bank", avoid={"victoria"})
+
+
 def test_same_station():
     assert plan_journey("Victoria", "Victoria") == [{"line": None, "stops": ["Victoria"]}]
 
