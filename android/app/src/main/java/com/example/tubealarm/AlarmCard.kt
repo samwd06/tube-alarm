@@ -35,12 +35,15 @@ fun AlarmCard(start: String, end: String) {
 
     val permissions = buildList {
         add(Manifest.permission.ACCESS_FINE_LOCATION)
+        add(Manifest.permission.ACCESS_COARSE_LOCATION)
         if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
     }
     val askForPermissions = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { granted ->
-        // Notifications are nice to have, but without location the alarm can't work at all
+        // Notifications are nice to have, but without location the alarm can't work at all.
+        // Approximate isn't enough either: Android only updates it every 10 minutes or so,
+        // which is longer than most journeys
         if (granted[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
             permissionError = null
             val intent = Intent(context, AlarmService::class.java)
@@ -50,6 +53,9 @@ fun AlarmCard(start: String, end: String) {
             if (granted[Manifest.permission.POST_NOTIFICATIONS] == false) {
                 permissionError = "Without notifications the alarm can only vibrate when the screen is off"
             }
+        } else if (granted[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+            permissionError = "The alarm needs precise location. Approximate location only updates " +
+                "every few minutes, so it would miss your stop. Tap Start alarm again to allow it"
         } else {
             permissionError = "The alarm needs your location to know which station you're at"
         }
