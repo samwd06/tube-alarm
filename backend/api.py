@@ -11,13 +11,28 @@ from stops_between import find_stations, stops_between
 app = FastAPI(title="Tube Alarm")
 
 
-def live_warnings(legs):
+def live_statuses():
     # A journey is still useful without live data, so a TfL outage only drops the warnings
     try:
-        statuses = line_statuses()
+        return line_statuses()
     except requests.RequestException:
-        statuses = {}
-    return warnings_for([leg["line"] for leg in legs if leg["line"]], statuses)
+        return {}
+
+
+def lines_in(legs):
+    return [leg["line"] for leg in legs if leg["line"]]
+
+
+def reroute(current, end, legs, statuses):
+    # Only worth suggesting if a line still ahead is badly affected and there's a way round it
+    avoid = {line for line in lines_in(legs) if statuses.get(line, {}).get("serious")}
+    if not avoid:
+        return None
+    try:
+        new_legs = plan_journey(current, end, avoid=avoid)
+    except ValueError:
+        return None
+    return {"avoid": sorted(avoid), "minutes": journey_minutes(new_legs), "legs": new_legs}
 
 
 @app.get("/stations")
@@ -58,7 +73,7 @@ def journey(start: str, end: str):
         "end": end,
         "minutes": journey_minutes(legs),
         "legs": legs,
-        "warnings": live_warnings(legs),
+        "warnings": warnings_for(lines_in(legs), live_statuses()),
     }
 
 
@@ -72,5 +87,7 @@ def journey_progress(start: str, end: str, current: str, wake_before: int = 1):
         raise HTTPException(status_code=404, detail=str(error))
     result["minutes_left"] = journey_minutes(left)
     # Only the lines still ahead matter, so a delay on a line already left behind isn't shown
-    result["warnings"] = live_warnings(left)
+    statuses = live_statuses()
+    result["warnings"] = warnings_for(lines_in(left), statuses)
+    result["reroute"] = reroute(current, end, left, statuses)
     return result

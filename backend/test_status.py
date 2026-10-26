@@ -17,7 +17,15 @@ SAMPLE = [
 
 
 def test_good_service():
-    assert parse_statuses(SAMPLE)["victoria"] == {"good": True, "status": "Good Service", "reasons": []}
+    assert parse_statuses(SAMPLE)["victoria"] == {"good": True, "serious": False, "status": "Good Service", "reasons": []}
+
+
+def test_minor_delays_are_not_serious():
+    assert parse_statuses(SAMPLE)["central"]["serious"] is False
+
+
+def test_a_part_closure_is_serious():
+    assert parse_statuses(SAMPLE)["district"]["serious"] is True
 
 
 def test_delays_keep_the_reason():

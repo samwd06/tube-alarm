@@ -8,9 +8,21 @@ client = TestClient(api.app)
 
 def fake_statuses():
     return {
-        "victoria": {"good": False, "status": "Minor Delays", "reasons": ["Signal failure at Brixton."]},
-        "northern": {"good": True, "status": "Good Service", "reasons": []},
+        "victoria": {"good": False, "serious": False, "status": "Minor Delays", "reasons": ["Signal failure at Brixton."]},
+        "northern": {"good": True, "serious": False, "status": "Good Service", "reasons": []},
     }
+
+
+def northern_suspended():
+    statuses = fake_statuses()
+    statuses["northern"] = {"good": False, "serious": True, "status": "Part Suspended", "reasons": []}
+    return statuses
+
+
+def victoria_suspended():
+    statuses = fake_statuses()
+    statuses["victoria"] = {"good": False, "serious": True, "status": "Suspended", "reasons": []}
+    return statuses
 
 
 def tfl_is_down():
@@ -87,3 +99,26 @@ def test_progress_still_works_when_tfl_is_down(monkeypatch):
     response = client.get("/progress", params=params)
     assert response.status_code == 200
     assert response.json()["warnings"] == []
+
+
+def test_progress_has_no_reroute_for_minor_delays(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", fake_statuses)
+    params = {"start": "Brixton", "end": "Bank", "current": "Brixton"}
+    assert client.get("/progress", params=params).json()["reroute"] is None
+
+
+def test_progress_suggests_a_way_round_a_suspension(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", northern_suspended)
+    params = {"start": "Brixton", "end": "Bank", "current": "Brixton"}
+    reroute = client.get("/progress", params=params).json()["reroute"]
+    assert reroute["avoid"] == ["northern"]
+    assert "northern" not in [leg["line"] for leg in reroute["legs"]]
+    assert reroute["legs"][0]["stops"][0] == "Brixton"
+    assert reroute["legs"][-1]["stops"][-1] == "Bank"
+
+
+def test_progress_has_no_reroute_when_there_is_no_way_round(monkeypatch):
+    # Brixton is only on the Victoria line
+    monkeypatch.setattr(api, "line_statuses", victoria_suspended)
+    params = {"start": "Brixton", "end": "Bank", "current": "Brixton"}
+    assert client.get("/progress", params=params).json()["reroute"] is None

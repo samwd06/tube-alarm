@@ -6,6 +6,9 @@ load_dotenv("../.env")
 api_key = os.getenv("TFL_APP_KEY")
 
 GOOD_SERVICE = 10
+# TfL's codes for a line that's closed, suspended or badly delayed, at least in part.
+# Minor delays (9) and reduced service (7) aren't worth changing route for
+SERIOUS = {1, 2, 3, 4, 5, 6, 11, 16, 20}
 
 
 def parse_statuses(data):
@@ -15,6 +18,7 @@ def parse_statuses(data):
         statuses = line["lineStatuses"]
         lines[line["id"]] = {
             "good": all(s["statusSeverity"] == GOOD_SERVICE for s in statuses),
+            "serious": any(s["statusSeverity"] in SERIOUS for s in statuses),
             # dict.fromkeys drops repeats but keeps the order, so "Part Suspended" only shows once
             "status": ", ".join(dict.fromkeys(s["statusSeverityDescription"] for s in statuses)),
             "reasons": [s["reason"] for s in statuses if s.get("reason")],
