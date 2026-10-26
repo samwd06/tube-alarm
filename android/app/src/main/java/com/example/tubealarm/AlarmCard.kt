@@ -93,6 +93,7 @@ fun AlarmCard(start: String, end: String) {
                     }
                 }
                 now?.warnings?.forEach { Text(it, color = MaterialTheme.colorScheme.error) }
+                now?.reroute?.let { Text("Another way: ${rerouteText(it)}") }
                 OutlinedButton(
                     onClick = { context.stopService(Intent(context, AlarmService::class.java)) },
                     modifier = Modifier.fillMaxWidth(),

@@ -59,6 +59,27 @@ class JourneyApiTest {
         assertEquals(false, progress.wakeUp)
         assertEquals(12, progress.minutesLeft)
         assertEquals(emptyList<String>(), progress.warnings)
+        assertEquals(null, progress.reroute)
+    }
+
+    @Test
+    fun readsReroute() {
+        val progress = parseProgress(
+            """
+            {"current": "Brixton", "stops_left": 7, "next_stop_off": "Stockwell",
+             "stops_to_next_stop_off": 1, "wake_up": true, "minutes_left": 17, "warnings": [],
+             "reroute": {"avoid": ["northern"], "minutes": 21, "legs": [
+                {"line": "victoria", "stops": ["Brixton", "Stockwell", "Oxford Circus"]},
+                {"line": "central", "stops": ["Oxford Circus", "Bank"]}]}}
+            """
+        )
+
+        val reroute = progress.reroute!!
+        assertEquals(listOf("northern"), reroute.avoid)
+        assertEquals(
+            "Victoria line to Oxford Circus, then Central line to Bank (about 21 minutes)",
+            rerouteText(reroute),
+        )
     }
 
     @Test

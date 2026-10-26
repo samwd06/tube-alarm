@@ -124,6 +124,11 @@ fun lineName(line: String?): String = when (line) {
 
 fun stopsText(count: Int): String = if (count == 1) "1 stop" else "$count stops"
 
+// e.g. "Victoria line to Oxford Circus, then Central line to Bank (about 20 minutes)"
+fun rerouteText(reroute: Reroute): String =
+    reroute.legs.joinToString(", then ") { "${lineName(it.line)} to ${it.stops.last()}" } +
+        " (about ${reroute.minutes} minutes)"
+
 @Preview(showBackground = true)
 @Composable
 fun JourneyResultPreview() {

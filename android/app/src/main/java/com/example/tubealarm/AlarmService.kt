@@ -104,7 +104,7 @@ class AlarmService : Service() {
                 // Whatever was wrong at the start was already on the journey screen,
                 // so only a new problem (or one getting worse) is worth a notification
                 val fresh = now.warnings - (warned ?: now.warnings.toSet())
-                if (fresh.isNotEmpty()) disrupted(fresh)
+                if (fresh.isNotEmpty()) disrupted(fresh, now.reroute)
                 warned = now.warnings.toSet()
             } catch (e: CancellationException) {
                 throw e
@@ -128,9 +128,10 @@ class AlarmService : Service() {
         notifications.notify(WAKE_UP_ID, notification(WAKE_UP_CHANNEL, "Wake up!", "Get off at $station"))
     }
 
-    private fun disrupted(warnings: List<String>) {
+    private fun disrupted(warnings: List<String>, reroute: Reroute?) {
         val notifications = getSystemService(NotificationManager::class.java)
-        val text = warnings.joinToString(", ")
+        val way = reroute?.let { "\nAnother way: ${rerouteText(it)}" } ?: ""
+        val text = warnings.joinToString(", ") + way
         notifications.notify(DISRUPTION_ID, notification(DISRUPTION_CHANNEL, "Problem on your route", text))
     }
 
@@ -142,6 +143,8 @@ class AlarmService : Service() {
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
             .setContentText(text)
+            // Lets the longer messages, like a way round a disruption, be read in full
+            .setStyle(Notification.BigTextStyle().bigText(text))
             .setContentIntent(open)
             .setOnlyAlertOnce(channel == ONGOING_CHANNEL)
             .build()

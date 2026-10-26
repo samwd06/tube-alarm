@@ -19,17 +19,20 @@ fun parseJourney(json: String): Journey {
 
     return Journey(
         minutes = body.getInt("minutes"),
-        legs = (0 until legs.length()).map { i ->
-            val leg = legs.getJSONObject(i)
-            val stops = leg.getJSONArray("stops")
-            Leg(
-                line = if (leg.isNull("line")) null else leg.getString("line"),
-                stops = (0 until stops.length()).map { stops.getString(it) },
-            )
-        },
+        legs = parseLegs(legs),
         warnings = parseWarnings(body.getJSONArray("warnings")),
     )
 }
+
+private fun parseLegs(legs: JSONArray): List<Leg> =
+    (0 until legs.length()).map { i ->
+        val leg = legs.getJSONObject(i)
+        val stops = leg.getJSONArray("stops")
+        Leg(
+            line = if (leg.isNull("line")) null else leg.getString("line"),
+            stops = (0 until stops.length()).map { stops.getString(it) },
+        )
+    }
 
 // Turned into text straight away, e.g. "Victoria line: Minor Delays"
 private fun parseWarnings(warnings: JSONArray): List<String> =
@@ -46,7 +49,11 @@ data class Progress(
     val wakeUp: Boolean,
     val minutesLeft: Int,
     val warnings: List<String>,
+    val reroute: Reroute?,
 )
+
+// Another way to the destination from where the passenger is now, around lines that are badly disrupted
+data class Reroute(val avoid: List<String>, val minutes: Int, val legs: List<Leg>)
 
 fun parseProgress(json: String): Progress {
     val body = JSONObject(json)
@@ -59,6 +66,14 @@ fun parseProgress(json: String): Progress {
         minutesLeft = body.getInt("minutes_left"),
         // A backend from before 25 Oct doesn't send these
         warnings = body.optJSONArray("warnings")?.let(::parseWarnings) ?: emptyList(),
+        reroute = body.optJSONObject("reroute")?.let { reroute ->
+            val avoid = reroute.getJSONArray("avoid")
+            Reroute(
+                avoid = (0 until avoid.length()).map { avoid.getString(it) },
+                minutes = reroute.getInt("minutes"),
+                legs = parseLegs(reroute.getJSONArray("legs")),
+            )
+        },
     )
 }
 
