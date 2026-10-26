@@ -1,6 +1,7 @@
 package com.example.tubealarm
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,6 +31,7 @@ fun AlarmCard(start: String, end: String) {
     val journey by AlarmService.journey.collectAsState()
     val progress by AlarmService.progress.collectAsState()
     val serviceError by AlarmService.error.collectAsState()
+    val avoiding by AlarmService.avoiding.collectAsState()
     var permissionError by remember { mutableStateOf<String?>(null) }
     val running = journey == (start to end)
 
@@ -46,10 +48,7 @@ fun AlarmCard(start: String, end: String) {
         // which is longer than most journeys
         if (granted[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
             permissionError = null
-            val intent = Intent(context, AlarmService::class.java)
-                .putExtra(AlarmService.EXTRA_START, start)
-                .putExtra(AlarmService.EXTRA_END, end)
-            context.startForegroundService(intent)
+            startAlarm(context, start, end)
             if (granted[Manifest.permission.POST_NOTIFICATIONS] == false) {
                 permissionError = "Without notifications the alarm can only vibrate when the screen is off"
             }
@@ -93,7 +92,17 @@ fun AlarmCard(start: String, end: String) {
                     }
                 }
                 now?.warnings?.forEach { Text(it, color = MaterialTheme.colorScheme.error) }
-                now?.reroute?.let { Text("Another way: ${rerouteText(it)}") }
+                if (avoiding.isNotEmpty()) {
+                    Text("Going another way, avoiding the ${avoiding.joinToString(" and ") { lineName(it) }}")
+                }
+                now?.reroute?.let { reroute ->
+                    Text("Another way: ${rerouteText(reroute)}")
+                    // Permissions were already given when the alarm started, so this can restart it straight away
+                    Button(
+                        onClick = { startAlarm(context, start, end, reroute.avoid, reroute.legs.first().stops.first()) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Use this way") }
+                }
                 OutlinedButton(
                     onClick = { context.stopService(Intent(context, AlarmService::class.java)) },
                     modifier = Modifier.fillMaxWidth(),
@@ -104,4 +113,17 @@ fun AlarmCard(start: String, end: String) {
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
     }
+}
+
+// from is where a way round begins. The journey is still start to end, so the card still matches it
+private fun startAlarm(
+    context: Context, start: String, end: String,
+    avoid: List<String> = emptyList(), from: String = start,
+) {
+    val intent = Intent(context, AlarmService::class.java)
+        .putExtra(AlarmService.EXTRA_START, start)
+        .putExtra(AlarmService.EXTRA_END, end)
+        .putExtra(AlarmService.EXTRA_FROM, from)
+        .putStringArrayListExtra(AlarmService.EXTRA_AVOID, ArrayList(avoid))
+    context.startForegroundService(intent)
 }

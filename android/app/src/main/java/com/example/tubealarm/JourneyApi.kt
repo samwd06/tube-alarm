@@ -81,8 +81,11 @@ fun parseProgress(json: String): Progress {
 fun fetchJourney(start: String, end: String): Journey =
     parseJourney(get("/journey?start=${encode(start)}&end=${encode(end)}"))
 
-fun fetchProgress(start: String, end: String, current: String): Progress =
-    parseProgress(get("/progress?start=${encode(start)}&end=${encode(end)}&current=${encode(current)}"))
+fun fetchProgress(start: String, end: String, current: String, avoid: List<String> = emptyList()): Progress {
+    var path = "/progress?start=${encode(start)}&end=${encode(end)}&current=${encode(current)}"
+    if (avoid.isNotEmpty()) path += "&avoid=${encode(avoid.joinToString(","))}"
+    return parseProgress(get(path))
+}
 
 // The backend sorts by distance, so the first name is the closest station
 fun parseNearest(json: String): String = JSONArray(json).getJSONObject(0).getString("name")

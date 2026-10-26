@@ -40,6 +40,7 @@ class AlarmService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val start = intent?.getStringExtra(EXTRA_START)
         val end = intent?.getStringExtra(EXTRA_END)
+        val avoid = intent?.getStringArrayListExtra(EXTRA_AVOID)?.toList() ?: emptyList()
 
         // Android kills the app if a foreground service doesn't call startForeground,
         // so that has to happen before giving up on a bad intent
@@ -55,6 +56,8 @@ class AlarmService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        // A way round a disruption starts wherever the passenger switched to it
+        val from = intent.getStringExtra(EXTRA_FROM) ?: start
 
         val manager = getSystemService(LocationManager::class.java)
         manager.removeUpdates(listener)
@@ -72,13 +75,14 @@ class AlarmService : Service() {
         getSystemService(NotificationManager::class.java).cancel(WAKE_UP_ID)
         getSystemService(NotificationManager::class.java).cancel(DISRUPTION_ID)
         journey.value = start to end
+        avoiding.value = avoid
         progress.value = null
         error.value = null
-        scope.launch { follow(start, end) }
+        scope.launch { follow(from, end, avoid) }
         return START_NOT_STICKY
     }
 
-    private suspend fun CoroutineScope.follow(start: String, end: String) {
+    private suspend fun CoroutineScope.follow(start: String, end: String, avoid: List<String>) {
         var wokenFor: String? = null
         var warned: Set<String>? = null
         while (isActive) {
@@ -91,7 +95,7 @@ class AlarmService : Service() {
                 // The fetches block, so cancelling can't stop one halfway. withContext at least
                 // throws on the way out, so a stopped alarm doesn't post or buzz afterwards
                 val now = withContext(Dispatchers.IO) {
-                    fetchProgress(start, end, fetchNearest(here.latitude, here.longitude))
+                    fetchProgress(start, end, fetchNearest(here.latitude, here.longitude), avoid)
                 }
                 progress.value = now
                 error.value = null
@@ -169,6 +173,7 @@ class AlarmService : Service() {
         getSystemService(NotificationManager::class.java).cancel(DISRUPTION_ID)
         scope.cancel()
         journey.value = null
+        avoiding.value = emptyList()
         progress.value = null
         super.onDestroy()
     }
@@ -176,6 +181,8 @@ class AlarmService : Service() {
     companion object {
         const val EXTRA_START = "start"
         const val EXTRA_END = "end"
+        const val EXTRA_AVOID = "avoid"
+        const val EXTRA_FROM = "from"
         private const val ONGOING_CHANNEL = "progress"
         private const val WAKE_UP_CHANNEL = "wake_up"
         private const val DISRUPTION_CHANNEL = "disruptions"
@@ -187,5 +194,7 @@ class AlarmService : Service() {
         val journey = MutableStateFlow<Pair<String, String>?>(null)
         val progress = MutableStateFlow<Progress?>(null)
         val error = MutableStateFlow<String?>(null)
+        // Lines the passenger chose to go round after a disruption
+        val avoiding = MutableStateFlow<List<String>>(emptyList())
     }
 }
