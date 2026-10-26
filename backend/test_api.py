@@ -122,3 +122,37 @@ def test_progress_has_no_reroute_when_there_is_no_way_round(monkeypatch):
     monkeypatch.setattr(api, "line_statuses", victoria_suspended)
     params = {"start": "Brixton", "end": "Bank", "current": "Brixton"}
     assert client.get("/progress", params=params).json()["reroute"] is None
+
+
+def test_progress_follows_the_way_round_once_chosen(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", northern_suspended)
+    params = {"start": "Brixton", "end": "Bank", "current": "Stockwell", "avoid": "northern"}
+    body = client.get("/progress", params=params).json()
+    # Without avoid this would say get off at Stockwell for the Northern line
+    assert body["next_stop_off"] == "Oxford Circus"
+
+
+def test_the_way_round_stays_the_same_as_the_passenger_moves(monkeypatch):
+    # From Green Park itself the best way round is the Jubilee line, but someone already on
+    # the Victoria line heading for Oxford Circus should still be told to get off there
+    monkeypatch.setattr(api, "line_statuses", northern_suspended)
+    params = {"start": "Brixton", "end": "Bank", "current": "Green Park", "avoid": "northern"}
+    body = client.get("/progress", params=params).json()
+    assert body["next_stop_off"] == "Oxford Circus"
+    assert body["wake_up"] is True
+    # The Northern line isn't on the new route, so it's no longer a warning or a reason to reroute
+    assert "northern" not in [w["line"] for w in body["warnings"]]
+    assert body["reroute"] is None
+
+
+def test_avoid_keeps_the_old_lines_when_another_goes_wrong(monkeypatch):
+    def central_suspended_too():
+        statuses = northern_suspended()
+        statuses["central"] = {"good": False, "serious": True, "status": "Suspended", "reasons": []}
+        return statuses
+
+    monkeypatch.setattr(api, "line_statuses", central_suspended_too)
+    params = {"start": "Brixton", "end": "Bank", "current": "Brixton", "avoid": "northern"}
+    reroute = client.get("/progress", params=params).json()["reroute"]
+    assert reroute["avoid"] == ["central", "northern"]
+    assert not {"central", "northern"} & {leg["line"] for leg in reroute["legs"]}

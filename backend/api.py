@@ -23,16 +23,19 @@ def lines_in(legs):
     return [leg["line"] for leg in legs if leg["line"]]
 
 
-def reroute(current, end, legs, statuses):
+def reroute(current, end, legs, statuses, avoiding=()):
     # Only worth suggesting if a line still ahead is badly affected and there's a way round it
-    avoid = {line for line in lines_in(legs) if statuses.get(line, {}).get("serious")}
-    if not avoid:
+    serious = {line for line in lines_in(legs) if statuses.get(line, {}).get("serious")}
+    if not serious:
         return None
+    # Keep away from lines the passenger is already avoiding, as well as the new ones
+    avoid = serious | set(avoiding)
     try:
         new_legs = plan_journey(current, end, avoid=avoid)
     except ValueError:
         return None
     return {"avoid": sorted(avoid), "minutes": journey_minutes(new_legs), "legs": new_legs}
+
 
 
 @app.get("/stations")
@@ -78,9 +81,12 @@ def journey(start: str, end: str):
 
 
 @app.get("/progress")
-def journey_progress(start: str, end: str, current: str, wake_before: int = 1):
+def journey_progress(start: str, end: str, current: str, wake_before: int = 1, avoid: str = ""):
+    # After switching to a way round, the app sends where it started from and the lines to avoid,
+    # so every check follows that same route rather than planning a new one from each station
+    avoiding = {line for line in avoid.split(",") if line}
     try:
-        legs = plan_journey(start, end)
+        legs = plan_journey(start, end, avoid=avoiding)
         result = progress(legs, current, wake_before)
         left = remaining_legs(legs, current)
     except ValueError as error:
@@ -89,5 +95,5 @@ def journey_progress(start: str, end: str, current: str, wake_before: int = 1):
     # Only the lines still ahead matter, so a delay on a line already left behind isn't shown
     statuses = live_statuses()
     result["warnings"] = warnings_for(lines_in(left), statuses)
-    result["reroute"] = reroute(current, end, left, statuses)
+    result["reroute"] = reroute(current, end, left, statuses, avoiding)
     return result
