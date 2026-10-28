@@ -1,13 +1,25 @@
 package com.example.tubealarm
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -18,10 +30,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.tubealarm.ui.theme.TubeAlarmTheme
+import com.example.tubealarm.ui.theme.lineColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,45 +55,48 @@ fun JourneyScreen(modifier: Modifier = Modifier) {
         modifier = modifier
             .padding(16.dp)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Plan a journey", style = MaterialTheme.typography.headlineSmall)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Roundel()
+            Column {
+                Text("Tube Alarm", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    "Never sleep past your stop",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
 
-        OutlinedTextField(
-            value = start,
-            onValueChange = { start = it },
-            label = { Text("From") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = end,
-            onValueChange = { end = it },
-            label = { Text("To") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Button(
-            onClick = {
-                loading = true
-                error = null
-                scope.launch {
-                    try {
-                        // Network calls aren't allowed on the main thread, so do it on the IO one
-                        journey = withContext(Dispatchers.IO) { fetchJourney(start.trim(), end.trim()) }
-                    } catch (e: Exception) {
-                        journey = null
-                        error = e.message ?: "Couldn't reach the server"
-                    } finally {
-                        loading = false
+        RoundCard {
+            Text("Where are you going?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            StationField(start, { start = it }, "From", MaterialTheme.colorScheme.primary)
+            StationField(end, { end = it }, "To", MaterialTheme.colorScheme.secondary)
+            Button(
+                onClick = {
+                    loading = true
+                    error = null
+                    scope.launch {
+                        try {
+                            // Network calls aren't allowed on the main thread, so do it on the IO one
+                            journey = withContext(Dispatchers.IO) { fetchJourney(start.trim(), end.trim()) }
+                        } catch (e: Exception) {
+                            journey = null
+                            error = e.message ?: "Couldn't reach the server"
+                        } finally {
+                            loading = false
+                        }
                     }
-                }
-            },
-            enabled = start.isNotBlank() && end.isNotBlank() && !loading,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(if (loading) "Planning..." else "Plan journey")
+                },
+                enabled = start.isNotBlank() && end.isNotBlank() && !loading,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+            ) {
+                Text(if (loading) "Planning..." else "Plan journey", fontWeight = FontWeight.SemiBold)
+            }
         }
 
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -91,24 +110,80 @@ fun JourneyScreen(modifier: Modifier = Modifier) {
     }
 }
 
+// The rounded white card everything on the screen sits in
+@Composable
+fun RoundCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun StationField(value: String, onChange: (String) -> Unit, label: String, dot: Color) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        leadingIcon = { Box(Modifier.size(12.dp).background(dot, CircleShape)) },
+        singleLine = true,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
 @Composable
 fun JourneyResult(journey: Journey) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("About ${journey.minutes} minutes", style = MaterialTheme.typography.titleMedium)
-
-        journey.warnings.forEach {
-            Text(it, color = MaterialTheme.colorScheme.error)
+    RoundCard {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("${journey.minutes}", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+            Text("min", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
         }
 
-        journey.legs.forEach { leg ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(lineName(leg.line), style = MaterialTheme.typography.titleSmall)
-                    Text("${leg.stops.first()} to ${leg.stops.last()}")
-                    if (leg.line != "walk" && leg.stops.size > 1) {
-                        Text(stopsText(leg.stops.size - 1), style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+        journey.warnings.forEach { Warning(it) }
+
+        journey.legs.forEach { leg -> LegRow(leg) }
+    }
+}
+
+@Composable
+fun Warning(text: String) {
+    Text(
+        text,
+        color = MaterialTheme.colorScheme.onErrorContainer,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    )
+}
+
+@Composable
+private fun LegRow(leg: Leg) {
+    val colour = lineColor(leg.line, isSystemInDarkTheme())
+    Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(
+            Modifier
+                .width(6.dp)
+                .fillMaxHeight()
+                .background(colour, RoundedCornerShape(3.dp))
+        )
+        Column {
+            Text(lineName(leg.line), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text("${leg.stops.first()} to ${leg.stops.last()}")
+            if (leg.line != "walk" && leg.stops.size > 1) {
+                Text(
+                    stopsText(leg.stops.size - 1),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

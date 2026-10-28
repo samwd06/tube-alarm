@@ -9,9 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -23,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -60,9 +59,9 @@ fun AlarmCard(start: String, end: String) {
         }
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Alarm", style = MaterialTheme.typography.titleSmall)
+    RoundCard {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Alarm", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 
             if (!running) {
                 // Only one alarm can run, so say so before starting this one quietly replaces it
@@ -91,7 +90,7 @@ fun AlarmCard(start: String, end: String) {
                         Text("About ${now.minutesLeft} minutes left", style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                now?.warnings?.forEach { Text(it, color = MaterialTheme.colorScheme.error) }
+                now?.warnings?.forEach { Warning(it) }
                 if (avoiding.isNotEmpty()) {
                     Text("Going another way, avoiding the ${avoiding.joinToString(" and ") { lineName(it) }}")
                 }
