@@ -7,6 +7,16 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import com.example.tubealarm.ui.theme.TubeRed
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
@@ -77,18 +87,11 @@ fun AlarmCard(start: String, end: String) {
                 ) { Text(if (other != null) "Switch alarm to this journey" else "Start alarm") }
             } else {
                 val now = progress
-                when {
-                    now == null -> Text("Finding your station...")
-                    now.wakeUp -> Text(
-                        "Wake up! Get off at ${now.nextStopOff}",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    else -> {
-                        Text("At ${now.current}")
-                        Text("Get off at ${now.nextStopOff}, ${stopsText(now.stopsToNextStopOff)} away")
-                        Text("About ${now.minutesLeft} minutes left", style = MaterialTheme.typography.bodySmall)
-                    }
+                if (now == null) {
+                    Text("Finding your station...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    TrainTrack(now)
+                    if (now.wakeUp) WakeUpBanner(now.nextStopOff) else NextStop(now)
                 }
                 now?.warnings?.forEach { Warning(it) }
                 if (avoiding.isNotEmpty()) {
@@ -119,4 +122,53 @@ private fun startAlarm(
     avoid: List<String> = emptyList(), from: String = start,
 ) {
     context.startForegroundService(AlarmService.alarmIntent(context, start, end, avoid, from))
+}
+
+@Composable
+private fun NextStop(now: Progress) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Get off at", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(now.nextStopOff, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(
+                "At ${now.current} · about ${now.minutesLeft} min left",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        // How many stops until then, big enough to read at a glance on a moving train
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "${now.stopsToNextStopOff}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    if (now.stopsToNextStopOff == 1) "stop" else "stops",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WakeUpBanner(station: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(TubeRed, RoundedCornerShape(16.dp))
+            .padding(16.dp),
+    ) {
+        Text("WAKE UP", color = Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        Text("Get off at $station", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+    }
 }

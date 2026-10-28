@@ -6,6 +6,9 @@ The app plans a journey with the backend and then follows it by GPS, so it can w
 
 - `MainActivity.kt` asks for local network access on Android 17 and shows the journey screen.
 - `JourneyScreen.kt` has the From and To fields, the planned journey and the alarm card.
+- `RouteMap.kt` draws the planned journey like a strip of the Tube map: each line in its own colour, a tick per station, white circles at the ends and changes, and long legs folded until tapped.
+- `TrainTrack.kt` draws the journey as a track across the alarm card, with a little train that glides to each new station, faded track behind it, and a red ring on the next stop to get off that pulses when it's time to wake up. With the phone's animations turned off, the train moves without gliding.
+- `Roundel.kt` and `ui/theme/` give the app TfL's blue and red and each line's own colour (`lineColor`).
 - `JourneyApi.kt` calls the backend's `/journey`, `/progress` and `/nearest` endpoints and reads the JSON.
 - `AlarmCard.kt` starts and stops the alarm and shows how far there is to go.
 - `AlarmService.kt` runs the alarm as a foreground service, so it keeps going when the screen locks. It checks the nearest station every 30 seconds, updates a notification, and vibrates once for each stop where the passenger needs to get off. If a line still ahead starts having problems partway through, it sends a separate notification. If a line ahead is closed, suspended or badly delayed, the card and that notification also suggest another way from where the passenger is. Tapping "Use this way", on the card or on the notification, restarts the alarm on that route, so it wakes the passenger for the new changes.
