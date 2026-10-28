@@ -6,22 +6,32 @@ import api
 client = TestClient(api.app)
 
 
+def line(status="Good Service", serious=False, reason=None, stops=()):
+    # The shape parse_statuses gives back, with one problem at most
+    good = status == "Good Service"
+    problem = {"serious": serious, "status": status, "reason": reason, "stops": list(stops)}
+    return {
+        "good": good, "serious": serious, "status": status,
+        "reasons": [reason] if reason else [], "problems": [] if good else [problem],
+    }
+
+
 def fake_statuses():
     return {
-        "victoria": {"good": False, "serious": False, "status": "Minor Delays", "reasons": ["Signal failure at Brixton."]},
-        "northern": {"good": True, "serious": False, "status": "Good Service", "reasons": []},
+        "victoria": line("Minor Delays", reason="Signal failure at Brixton."),
+        "northern": line(),
     }
 
 
 def northern_suspended():
     statuses = fake_statuses()
-    statuses["northern"] = {"good": False, "serious": True, "status": "Part Suspended", "reasons": []}
+    statuses["northern"] = line("Part Suspended", serious=True)
     return statuses
 
 
 def victoria_suspended():
     statuses = fake_statuses()
-    statuses["victoria"] = {"good": False, "serious": True, "status": "Suspended", "reasons": []}
+    statuses["victoria"] = line("Suspended", serious=True)
     return statuses
 
 
@@ -148,7 +158,7 @@ def test_the_way_round_stays_the_same_as_the_passenger_moves(monkeypatch):
 def test_avoid_keeps_the_old_lines_when_another_goes_wrong(monkeypatch):
     def central_suspended_too():
         statuses = northern_suspended()
-        statuses["central"] = {"good": False, "serious": True, "status": "Suspended", "reasons": []}
+        statuses["central"] = line("Suspended", serious=True)
         return statuses
 
     monkeypatch.setattr(api, "line_statuses", central_suspended_too)
@@ -156,3 +166,16 @@ def test_avoid_keeps_the_old_lines_when_another_goes_wrong(monkeypatch):
     reroute = client.get("/progress", params=params).json()["reroute"]
     assert reroute["avoid"] == ["central", "northern"]
     assert not {"central", "northern"} & {leg["line"] for leg in reroute["legs"]}
+
+
+def test_part_suspension_elsewhere_on_the_line_is_ignored(monkeypatch):
+    def northern_suspended_up_north():
+        statuses = fake_statuses()
+        statuses["northern"] = line("Part Suspended", serious=True, stops=["Edgware", "Burnt Oak", "Colindale"])
+        return statuses
+
+    monkeypatch.setattr(api, "line_statuses", northern_suspended_up_north)
+    params = {"start": "Brixton", "end": "Bank", "current": "Brixton"}
+    body = client.get("/progress", params=params).json()
+    assert "northern" not in [w["line"] for w in body["warnings"]]
+    assert body["reroute"] is None
