@@ -1,18 +1,14 @@
 package com.example.tubealarm
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,7 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.tubealarm.ui.theme.TubeAlarmTheme
-import com.example.tubealarm.ui.theme.lineColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -148,7 +143,7 @@ fun JourneyResult(journey: Journey) {
 
         journey.warnings.forEach { Warning(it) }
 
-        journey.legs.forEach { leg -> LegRow(leg) }
+        RouteMap(journey.legs)
     }
 }
 
@@ -163,30 +158,6 @@ fun Warning(text: String) {
             .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
     )
-}
-
-@Composable
-private fun LegRow(leg: Leg) {
-    val colour = lineColor(leg.line, isSystemInDarkTheme())
-    Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(
-            Modifier
-                .width(6.dp)
-                .fillMaxHeight()
-                .background(colour, RoundedCornerShape(3.dp))
-        )
-        Column {
-            Text(lineName(leg.line), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text("${leg.stops.first()} to ${leg.stops.last()}")
-            if (leg.line != "walk" && leg.stops.size > 1) {
-                Text(
-                    stopsText(leg.stops.size - 1),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
 }
 
 fun lineName(line: String?): String = when (line) {
