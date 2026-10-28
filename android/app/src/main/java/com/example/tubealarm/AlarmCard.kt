@@ -115,15 +115,9 @@ fun AlarmCard(start: String, end: String) {
     }
 }
 
-// from is where a way round begins. The journey is still start to end, so the card still matches it
 private fun startAlarm(
     context: Context, start: String, end: String,
     avoid: List<String> = emptyList(), from: String = start,
 ) {
-    val intent = Intent(context, AlarmService::class.java)
-        .putExtra(AlarmService.EXTRA_START, start)
-        .putExtra(AlarmService.EXTRA_END, end)
-        .putExtra(AlarmService.EXTRA_FROM, from)
-        .putStringArrayListExtra(AlarmService.EXTRA_AVOID, ArrayList(avoid))
-    context.startForegroundService(intent)
+    context.startForegroundService(AlarmService.alarmIntent(context, start, end, avoid, from))
 }

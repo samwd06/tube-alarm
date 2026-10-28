@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.location.Location
@@ -136,14 +137,27 @@ class AlarmService : Service() {
         val notifications = getSystemService(NotificationManager::class.java)
         val way = reroute?.let { "\nAnother way: ${rerouteText(it)}" } ?: ""
         val text = warnings.joinToString(", ") + way
-        notifications.notify(DISRUPTION_ID, notification(DISRUPTION_CHANNEL, "Problem on your route", text))
+        val (start, end) = journey.value ?: return
+        // The phone is usually locked by now, so the way round can be taken from the notification too
+        val switch = reroute?.let {
+            val intent = alarmIntent(this, start, end, it.avoid, it.legs.first().stops.first())
+            val pending = PendingIntent.getForegroundService(
+                this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            Notification.Action.Builder(null, "Use this way", pending).build()
+        }
+        notifications.notify(
+            DISRUPTION_ID, notification(DISRUPTION_CHANNEL, "Problem on your route", text, switch),
+        )
     }
 
-    private fun notification(channel: String, title: String, text: String): Notification {
+    private fun notification(
+        channel: String, title: String, text: String, action: Notification.Action? = null,
+    ): Notification {
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
         )
-        return Notification.Builder(this, channel)
+        val builder = Notification.Builder(this, channel)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
             .setContentText(text)
@@ -151,7 +165,8 @@ class AlarmService : Service() {
             .setStyle(Notification.BigTextStyle().bigText(text))
             .setContentIntent(open)
             .setOnlyAlertOnce(channel == ONGOING_CHANNEL)
-            .build()
+        action?.let { builder.addAction(it) }
+        return builder.build()
     }
 
     private fun createChannels() {
@@ -196,5 +211,15 @@ class AlarmService : Service() {
         val error = MutableStateFlow<String?>(null)
         // Lines the passenger chose to go round after a disruption
         val avoiding = MutableStateFlow<List<String>>(emptyList())
+
+        // from is where a way round begins. The journey is still start to end, so the screen still matches it
+        fun alarmIntent(
+            context: Context, start: String, end: String,
+            avoid: List<String> = emptyList(), from: String = start,
+        ): Intent = Intent(context, AlarmService::class.java)
+            .putExtra(EXTRA_START, start)
+            .putExtra(EXTRA_END, end)
+            .putExtra(EXTRA_FROM, from)
+            .putStringArrayListExtra(EXTRA_AVOID, ArrayList(avoid))
     }
 }
