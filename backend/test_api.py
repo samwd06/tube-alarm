@@ -179,3 +179,20 @@ def test_part_suspension_elsewhere_on_the_line_is_ignored(monkeypatch):
     body = client.get("/progress", params=params).json()
     assert "northern" not in [w["line"] for w in body["warnings"]]
     assert body["reroute"] is None
+
+
+def test_progress_includes_the_whole_route(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", fake_statuses)
+    params = {"start": "Brixton", "end": "Bank", "current": "Oval"}
+    legs = client.get("/progress", params=params).json()["legs"]
+    assert [leg["line"] for leg in legs] == ["victoria", "northern"]
+    # From the start, not just from where the passenger is now
+    assert legs[0]["stops"][0] == "Brixton"
+
+
+def test_progress_route_is_the_way_round_once_chosen(monkeypatch):
+    monkeypatch.setattr(api, "line_statuses", northern_suspended)
+    params = {"start": "Stockwell", "end": "Bank", "current": "Stockwell", "avoid": "northern"}
+    legs = client.get("/progress", params=params).json()["legs"]
+    assert "northern" not in [leg["line"] for leg in legs]
+    assert legs[0]["stops"][0] == "Stockwell"

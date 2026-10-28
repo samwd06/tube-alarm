@@ -50,6 +50,8 @@ data class Progress(
     val minutesLeft: Int,
     val warnings: List<String>,
     val reroute: Reroute?,
+    // The whole route being followed, from where it started, for drawing the train along it
+    val legs: List<Leg> = emptyList(),
 )
 
 // Another way to the destination from where the passenger is now, around lines that are badly disrupted
@@ -74,6 +76,7 @@ fun parseProgress(json: String): Progress {
                 legs = parseLegs(reroute.getJSONArray("legs")),
             )
         },
+        legs = body.optJSONArray("legs")?.let(::parseLegs) ?: emptyList(),
     )
 }
 

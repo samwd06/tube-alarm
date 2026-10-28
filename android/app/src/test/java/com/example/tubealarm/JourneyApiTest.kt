@@ -60,6 +60,22 @@ class JourneyApiTest {
         assertEquals(12, progress.minutesLeft)
         assertEquals(emptyList<String>(), progress.warnings)
         assertEquals(null, progress.reroute)
+        assertEquals(emptyList<Leg>(), progress.legs)
+    }
+
+    @Test
+    fun readsProgressRoute() {
+        val progress = parseProgress(
+            """
+            {"current": "Oval", "stops_left": 5, "next_stop_off": "Bank",
+             "stops_to_next_stop_off": 5, "wake_up": false, "minutes_left": 8, "legs": [
+                {"line": "victoria", "stops": ["Brixton", "Stockwell"]},
+                {"line": "northern", "stops": ["Stockwell", "Oval", "Bank"]}]}
+            """
+        )
+
+        assertEquals(listOf("victoria", "northern"), progress.legs.map { it.line })
+        assertEquals("Brixton", progress.legs.first().stops.first())
     }
 
     @Test

@@ -88,6 +88,8 @@ def journey_progress(start: str, end: str, current: str, wake_before: int = 1, a
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error))
     result["minutes_left"] = journey_minutes(left)
+    # The whole route being followed, so the app can draw the train's place along it
+    result["legs"] = legs
     # Only the lines still ahead matter, so a delay on a line already left behind isn't shown
     statuses = live_statuses()
     result["warnings"] = warnings_for(left, statuses)
