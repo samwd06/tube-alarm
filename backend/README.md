@@ -35,13 +35,23 @@ python load_routes.py
 
 `load_routes.py` can be run again at any time to refresh the data.
 
-To collect disruption data, run `python log_status.py` regularly. For example, this `crontab -e` line saves a snapshot every 15 minutes:
+To collect disruption data, run `python log_status.py` regularly. On macOS or Linux, this `crontab -e` line saves a snapshot every 15 minutes:
 
 ```
 */15 * * * * cd /path/to/tube-alarm/backend && venv/bin/python log_status.py >> ~/Library/Logs/tube-alarm-status.log 2>&1
 ```
 
-Each run adds a line like `Saved 11 lines at 20:00 UTC, 5 disrupted: ...` to the log, which is the quickest way to check it's still going. Nothing is saved while the computer is asleep, so the data leans towards the hours it's on. `crontab -r` removes the schedule (and anything else in the crontab).
+`crontab -r` removes the schedule (and anything else in the crontab).
+
+On Windows, Task Scheduler does the same job. From PowerShell:
+
+```
+schtasks /Create /SC MINUTE /MO 15 /TN "Tube Alarm status log" /TR "conhost.exe --headless cmd /c cd /d C:\path\to\tube-alarm\backend && venv\Scripts\python.exe log_status.py >> %LOCALAPPDATA%\tube-alarm-status.log 2>&1"
+```
+
+`conhost --headless` stops a console window flashing up every 15 minutes. The task only runs while you're logged in. `schtasks /Run /TN "Tube Alarm status log"` runs it once straight away, and `schtasks /Delete /TN "Tube Alarm status log"` removes it.
+
+Either way, each run adds a line like `Saved 11 lines at 20:00 UTC, 5 disrupted: ...` to the log, which is the quickest way to check it's still going. Nothing is saved while the computer is asleep, so the data leans towards the hours it's on.
 
 ## Running
 
